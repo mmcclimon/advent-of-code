@@ -1,40 +1,33 @@
 const fs = require("fs");
 const readline = require("readline");
 
-const rl = readline.createInterface({
-    input: fs.createReadStream('input-day1.txt'),
-    crlfDelay: Infinity,
-});
+const getLines = async function (filename, cb) {
+    const rl = readline.createInterface({
+        input: fs.createReadStream(filename),
+        crlfDelay: Infinity,
+    });
+
+    for await (const line of rl) {
+        cb(line);
+    }
+};
+
+const getLinesInt = async function (filename, cb) {
+    return getLines(filename, (line) => cb(parseInt(line)));
+}
 
 const fuelRequired = (mass) => Math.floor(mass / 3) - 2;
 const fuelRequiredExtra = (mass) => {
-    let total = 0;
-    let base = mass;
-
-    do {
-        base = fuelRequired(base);
-        total += base >= 0 ? base : 0;
-    } while (base >= 0);
-
-    return total;
+    const fuel = fuelRequired(mass);
+    return fuel >= 0 ? fuel + fuelRequired(fuel) : fuel;
 };
-
-/*
-const tests = [14, 1969, 100756];
-for (const t of tests) {
-    console.log(fuelRequiredExtra(t));
-}
-*/
-
 
 let sum1 = 0;
 let sum2 = 0;
 
-rl.on('line', (line) => {
-    const mass = parseInt(line);
+getLinesInt('input-day1.txt', (mass) => {
     sum1 += fuelRequired(mass);
     sum2 += fuelRequiredExtra(mass);
-}).on('close', () => {
-    console.log(sum1);
-    console.log(sum2);
+}).then(() => {
+    console.log(sum1, sum2);
 });
