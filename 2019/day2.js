@@ -10,41 +10,52 @@ const mem = [1,0,0,3,1,1,2,3,1,3,4,3,1,5,0,3,2,1,6,19,2,19,6,23,1,23,5,27,1,9,27
              1,10,111,115,1,115,5,119,2,6,119,123,1,123,5,127,2,127,6,131,1,131,5,
              135,1,2,135,139,1,139,13,0,99,2,0,14,0];
 
+const runWithInputs = (mem, input1, input2) => {
+    let running = true;
+    let pointer = 0;
+
+    let data = mem.slice();
+    data[1] = input1;
+    data[2] = input2;
+
+    const opcodes = {
+        1: function () {
+            let [xpos, ypos, retpos] = data.slice(pointer + 1, pointer + 4);
+            data[retpos] = data[xpos] + data[ypos];
+            pointer += 4;
+        },
+
+        2: function () {
+            let [xpos, ypos, retpos] = data.slice(pointer + 1, pointer + 4);
+            data[retpos] = data[xpos] * data[ypos];
+            pointer += 4;
+        },
+
+        99: function () { running = false },
+    };
+
+    while (running) {
+        const opcode = data[pointer];
+        const func = opcodes[opcode];
+
+        if (! func) { throw `uh oh: unknown opcode ${opcode}!` }
+        func();
+    }
+
+    return data[0];
+};
+
+const res1 = runWithInputs(mem, 12, 2);
+console.log('part 1: ' + res1);
+
 OUTER: for (let noun = 0; noun < 100; noun++) {
     for (let verb = 0; verb < 100; verb++) {
-        let running = true;
-        let pointer = 0;
+        const got = runWithInputs(mem, noun, verb);
 
-        let data = mem.slice();
-        data[1] = noun;
-        data[2] = verb;
-
-        while (running) {
-            const opcode = data[pointer];
-
-            if (opcode === 99) {
-                running = false;
-                break;
-            } else if (opcode === 1) {   // addition
-                let [xpos, ypos, retpos] = data.slice(pointer + 1, pointer + 4);
-                data[retpos] = data[xpos] + data[ypos];
-                pointer += 4;
-            } else if (opcode === 2) {
-                let [xpos, ypos, retpos] = data.slice(pointer + 1, pointer + 4);
-                data[retpos] = data[xpos] * data[ypos];
-                pointer += 4;
-            } else {
-                console.error('uh oh');
-            }
-        }
-
-        if (data[0] == 19690720) {
-            // done!
+        if (got == 19690720) {
             console.log(`noun: ${noun}, verb: ${verb}`);
-            console.log('answer: ' + (100 * noun + verb));
+            console.log('part 2: ' + (100 * noun + verb));
             break OUTER;
         }
     }
 }
-
-// console.log(data);
