@@ -12,8 +12,8 @@ const OpCode = class {
     const offset = basefunc.length + 1;
 
     return function () {
-      let funcArgs = this.data.slice(this.pointer + 1, this.pointer + offset);
-      basefunc.apply(this, funcArgs)
+      const funcArgs = this.data.slice(this.pointer + 1, this.pointer + offset);
+      basefunc.apply(this, funcArgs);
       this.pointer += offset;
     };
   }
@@ -52,7 +52,7 @@ exports.IntCode = class {
 
   addOpcode (op, func, force = false) {
     if (this.opcodes.has(op.code) && ! force) {
-      throw `cannot clobber opcode ${op.code}`;
+      throw new Error(`cannot clobber opcode ${op.code}`);
     }
 
     this.opcodes.set(op.code, op.compile());
@@ -67,9 +67,9 @@ exports.IntCode = class {
     this.data[2] = input2;
 
     while (this.isRunning) {
-        const opcode = this.data[this.pointer];
-        const func = this._resolveOpcode(opcode);
-        func.call(this);
+      const opcode = this.data[this.pointer];
+      const func = this._resolveOpcode(opcode);
+      func.call(this);
     }
 
     const ret = this.data[0];
@@ -79,7 +79,7 @@ exports.IntCode = class {
 
   _resolveOpcode (opcode) {
     const op = this.opcodes.get(opcode);
-    if (! op) { throw `uh oh: unknown opcode ${opcode}!` }
+    if (! op) { throw new Error(`uh oh: unknown opcode ${opcode}!`) }
     return op;
   }
 };
