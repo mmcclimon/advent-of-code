@@ -1,8 +1,7 @@
 'use strict';
 
-// let data = [1,9,10,3,2,3,11,0,99,30,40,50];
+const { IntCode } = require('./intcode.js');
 
-// real data
 const mem = [1,0,0,3,1,1,2,3,1,3,4,3,1,5,0,3,2,1,6,19,2,19,6,23,1,23,5,27,1,9,27,31,
              1,31,10,35,2,35,9,39,1,5,39,43,2,43,9,47,1,5,47,51,2,51,13,55,1,55,10,
              59,1,59,10,63,2,9,63,67,1,67,5,71,2,13,71,75,1,75,10,79,1,79,6,83,2,13,
@@ -10,51 +9,17 @@ const mem = [1,0,0,3,1,1,2,3,1,3,4,3,1,5,0,3,2,1,6,19,2,19,6,23,1,23,5,27,1,9,27
              1,10,111,115,1,115,5,119,2,6,119,123,1,123,5,127,2,127,6,131,1,131,5,
              135,1,2,135,139,1,139,13,0,99,2,0,14,0];
 
-const runWithInputs = (mem, input1, input2) => {
-    let running = true;
-    let pointer = 0;
+const cpu = new IntCode(mem, { addDefaultOpcodes: true });
 
-    let data = mem.slice();
-    data[1] = input1;
-    data[2] = input2;
-
-    const opcodes = {
-        1: function () {
-            let [xpos, ypos, retpos] = data.slice(pointer + 1, pointer + 4);
-            data[retpos] = data[xpos] + data[ypos];
-            pointer += 4;
-        },
-
-        2: function () {
-            let [xpos, ypos, retpos] = data.slice(pointer + 1, pointer + 4);
-            data[retpos] = data[xpos] * data[ypos];
-            pointer += 4;
-        },
-
-        99: function () { running = false },
-    };
-
-    while (running) {
-        const opcode = data[pointer];
-        const func = opcodes[opcode];
-
-        if (! func) { throw `uh oh: unknown opcode ${opcode}!` }
-        func();
-    }
-
-    return data[0];
-};
-
-const res1 = runWithInputs(mem, 12, 2);
+const res1 = cpu.runWithInputs(12, 2);
 console.log('part 1: ' + res1);
 
 OUTER: for (let noun = 0; noun < 100; noun++) {
     for (let verb = 0; verb < 100; verb++) {
-        const got = runWithInputs(mem, noun, verb);
+        const got = cpu.runWithInputs(noun, verb);
 
         if (got == 19690720) {
-            console.log(`noun: ${noun}, verb: ${verb}`);
-            console.log('part 2: ' + (100 * noun + verb));
+            console.log(`part 2: ${100 * noun + verb} (noun: ${noun}, verb: ${verb})`);
             break OUTER;
         }
     }
