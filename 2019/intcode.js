@@ -1,20 +1,44 @@
+const OpCode = class {
+  constructor (codeval, func) {
+    this.code = codeval;
+    this.func = func;
+  };
+
+  // We want to encapsulate the data-slicing and arg-passing, so we'll munge
+  // this into a 0-ary function that wraps this.func and calls the it with the
+  // list of arguments it expects.
+  compile () {
+    const basefunc = this.func;
+    const offset = basefunc.length + 1;
+
+    return function () {
+      let funcArgs = this.data.slice(this.pointer + 1, this.pointer + offset);
+      basefunc.apply(this, funcArgs)
+      this.pointer += offset;
+    };
+  }
+};
+
+const defaultOpcodes = [
+  // addition
+  new OpCode(1, function (xpos, ypos, retpos) {
+    this.data[retpos] = this.data[xpos] + this.data[ypos];
+  }),
+
+  // multiplication
+  new OpCode(2, function (xpos, ypos, retpos) {
+    this.data[retpos] = this.data[xpos] * this.data[ypos];
+  }),
+
+  // halt
+  new OpCode(99, function () {
+    this.isRunning = false;
+  }),
+];
+
+exports.OpCode = OpCode;
+
 exports.IntCode = class {
-  defaultOpcodes = new Map([
-    [ 1, function () {
-      let [xpos, ypos, retpos] = this.data.slice(this.pointer + 1, this.pointer + 4);
-      this.data[retpos] = this.data[xpos] + this.data[ypos];
-      this.pointer += 4;
-    } ],
-
-    [2, function () {
-      let [xpos, ypos, retpos] = this.data.slice(this.pointer + 1, this.pointer + 4);
-      this.data[retpos] = this.data[xpos] * this.data[ypos];
-      this.pointer += 4;
-    } ],
-
-    [99, function () { this.isRunning = false } ],
-  ]);
-
   constructor (memory, { opcodes, addDefaultOpcodes }) {
     this.memory = memory;
     this.isRunning = false;
@@ -22,20 +46,16 @@ exports.IntCode = class {
     this.pointer = 0;
 
     if (addDefaultOpcodes) {
-      for (const [k, f] of this.defaultOpcodes.entries()) {
-        if (! this.opcodes.has(k) ) {
-          this.addOpcode(k, f);
-        }
-      }
+      defaultOpcodes.forEach(op => this.addOpcode(op));
     }
   }
 
-  addOpcode (key, func) {
-    if (this.opcodes.has(key)) {
-      throw `cannot clobber opcode ${key}`;
+  addOpcode (op, func, force = false) {
+    if (this.opcodes.has(op.code) && ! force) {
+      throw `cannot clobber opcode ${op.code}`;
     }
 
-    this.opcodes.set(key, func);
+    this.opcodes.set(op.code, op.compile());
   }
 
   runWithInputs (input1, input2) {
@@ -58,8 +78,8 @@ exports.IntCode = class {
   }
 
   _resolveOpcode (opcode) {
-    const func = this.opcodes.get(opcode);
-    if (! func) { throw `uh oh: unknown opcode ${opcode}!` }
-    return func;
+    const op = this.opcodes.get(opcode);
+    if (! op) { throw `uh oh: unknown opcode ${opcode}!` }
+    return op;
   }
 };
