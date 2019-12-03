@@ -1,0 +1,23 @@
+{
+  "name": "advent-2019",
+  "version": "0.0.1",
+  "description": "advent of code, 2019",
+  "main": "index.js",
+  "dependencies": {
+    "eslint": "^6.7.2",
+    "eslint-plugin-node": "^10.0.0",
+    "eslint-plugin-import": "^2.18.2"
+  },
+  "devDependencies": {},
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mmcclimon/advent-of-code.git"
+  },
+  "author": "Michael McClimon <michael@mcclimon.org>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mmcclimon/advent-of-code/issues"
+  },
+  "homepage": "https://github.com/mmcclimon/advent-of-code#readme"
+}

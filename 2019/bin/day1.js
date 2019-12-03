@@ -1,4 +1,6 @@
-const utils = require('./advent-utils.js');
+'use strict';
+
+const utils = require('../lib/advent-utils.js');
 
 const doSum = (arr, func) => arr.reduce((acc, el) => acc + func(el), 0);
 const fuelRequired = (mass) => Math.max(Math.floor(mass / 3) - 2, 0);
@@ -13,6 +15,6 @@ console.assert(doSum(tests, fuelRequired) === 34239, 'part 1 is wrong');
 console.assert(doSum(tests, fuelRequiredExtra) === 51314, 'part 2 is wrong');
 
 // do the thing
-const lines = utils.fileLinesInt('input-day1.txt');
+const lines = utils.fileLinesInt('input/day1.txt');
 console.log('part 1: ' + doSum(lines, fuelRequired));
 console.log('part 2: ' + doSum(lines, fuelRequiredExtra));

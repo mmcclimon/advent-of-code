@@ -1,6 +1,6 @@
 'use strict';
 
-const { IntCode } = require('./intcode.js');
+const { IntCode } = require('../lib/intcode.js');
 
 /* eslint-disable comma-spacing */
 const mem = [

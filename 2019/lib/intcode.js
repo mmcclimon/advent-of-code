@@ -1,3 +1,5 @@
+'use strict';
+
 const OpCode = class {
   constructor (codeval, func) {
     this.code = codeval;
