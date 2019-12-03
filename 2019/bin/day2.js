@@ -3,6 +3,7 @@
 const { IntCode } = require('../lib/intcode.js');
 
 /* eslint-disable comma-spacing */
+// prettier-ignore
 const mem = [
   1,0,0,3,1,1,2,3,1,3,4,3,1,5,0,3,2,1,6,19,2,19,6,23,1,23,5,27,1,9,27,31,1,31,
   10,35,2,35,9,39,1,5,39,43,2,43,9,47,1,5,47,51,2,51,13,55,1,55,10,59,1,59,10,
@@ -18,13 +19,14 @@ const cpu = new IntCode(mem, { addDefaultOpcodes: true });
 const res1 = cpu.runWithInputs(12, 2);
 console.log('part 1: ' + res1);
 
-OUTER:
-for (let noun = 0; noun < 100; noun++) {
+OUTER: for (let noun = 0; noun < 100; noun++) {
   for (let verb = 0; verb < 100; verb++) {
     const got = cpu.runWithInputs(noun, verb);
 
     if (got === 19690720) {
-      console.log(`part 2: ${100 * noun + verb} (noun: ${noun}, verb: ${verb})`);
+      console.log(
+        `part 2: ${100 * noun + verb} (noun: ${noun}, verb: ${verb})`
+      );
       break OUTER;
     }
   }

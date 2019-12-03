@@ -3,8 +3,8 @@
 const utils = require('../lib/advent-utils.js');
 
 const doSum = (arr, func) => arr.reduce((acc, el) => acc + func(el), 0);
-const fuelRequired = (mass) => Math.max(Math.floor(mass / 3) - 2, 0);
-const fuelRequiredExtra = (mass) => {
+const fuelRequired = mass => Math.max(Math.floor(mass / 3) - 2, 0);
+const fuelRequiredExtra = mass => {
   const fuel = fuelRequired(mass);
   return fuel === 0 ? fuel : fuel + fuelRequiredExtra(fuel);
 };

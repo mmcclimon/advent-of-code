@@ -188,7 +188,7 @@ module.exports = {
     "space-unary-ops": ["error", {
       "words": true,
       "nonwords": false,
-      "overrides": { "!": true, "!!": true },
+      // "overrides": { "!": true, "!!": true },
     }],
     "spaced-comment": ["error", "always", {
       "line": { "markers": ["*package", "!", "/", ",", "="] },
