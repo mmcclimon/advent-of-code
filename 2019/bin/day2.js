@@ -1,6 +1,7 @@
 'use strict';
 
 const { IntCode } = require('../lib/intcode.js');
+const { range } = require('../lib/advent-utils.js');
 
 /* eslint-disable comma-spacing */
 // prettier-ignore
@@ -19,8 +20,8 @@ const cpu = new IntCode(mem, { addDefaultOpcodes: true });
 const res1 = cpu.runWithInputs(12, 2);
 console.log('part 1: ' + res1);
 
-OUTER: for (let noun = 0; noun < 100; noun++) {
-  for (let verb = 0; verb < 100; verb++) {
+OUTER: for (const noun of range(100)) {
+  for (const verb of range(100)) {
     const got = cpu.runWithInputs(noun, verb);
 
     if (got === 19690720) {

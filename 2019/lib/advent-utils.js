@@ -21,3 +21,15 @@ exports.getLines = async (fn, cb) => {
 exports.getLinesInt = async (filename, cb) => {
   return exports.getLines(filename, (line) => cb(parseInt(line)));
 };
+
+// python's range(); it is bananas that JS does not have this by default
+exports.range = function * (x, y, z) {
+  const start = arguments.length > 1 ? x : 0;
+  const end   = arguments.length > 1 ? y : x;
+  const step  = z || 1;
+  const shouldRun = step > 0 ? i => i < end : i => i > end;
+
+  for (let i = start; shouldRun(i); i += step) {
+    yield i;
+  }
+};
