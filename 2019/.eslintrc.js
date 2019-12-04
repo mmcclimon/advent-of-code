@@ -38,7 +38,7 @@ module.exports = {
       "exports": "always-multiline",
       "functions": "always-multiline"
     }],
-    "comma-spacing": ["error", { "before": false, "after": true }],
+    "comma-spacing": ["warn", { "before": false, "after": true }],
     "comma-style": ["error", "last"],
     "computed-property-spacing": ["error", "never"],
     "constructor-super": "error",
@@ -117,7 +117,7 @@ module.exports = {
       "allowSamePrecedence": true
     }],
     "no-mixed-spaces-and-tabs": "error",
-    "no-multi-spaces": "error",
+    "no-multi-spaces": "warn",
     "no-multi-str": "error",
     "no-multiple-empty-lines": ["error", { "max": 1, "maxEOF": 0 }],
     "no-negated-in-lhs": "error",
