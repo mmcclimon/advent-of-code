@@ -1,9 +1,17 @@
 'use strict';
+const { range } = require('../lib/advent-utils.js');
+
+const MODES = {
+  POSITION: 0,
+  IMMEDIATE: 1,
+};
 
 const OpCode = class {
   constructor (codeval, func) {
     this.code = codeval;
     this.func = func;
+    this.numArgs = func.length - 1; // account for modes as last one
+    this.compiled = this.compile();
   };
 
   // We want to encapsulate the data-slicing and arg-passing, so we'll munge
@@ -11,29 +19,82 @@ const OpCode = class {
   // list of arguments it expects.
   compile () {
     const basefunc = this.func;
-    const offset = basefunc.length + 1;
+    const offset = this.numArgs + 1;
 
-    return function () {
+    return function (modes) {
+      const pointerBefore = this.pointer;
+
       const funcArgs = this.data.slice(this.pointer + 1, this.pointer + offset);
+      funcArgs.push(modes);
       basefunc.apply(this, funcArgs);
-      this.pointer += offset;
+
+      // do not bump pointer if instruction moved it.
+      if (this.pointer === pointerBefore) {
+        this.pointer += offset;
+      }
     };
   }
 };
 
 const defaultOpcodes = [
   // addition
-  new OpCode(1, function (xpos, ypos, retpos) {
-    this.data[retpos] = this.data[xpos] + this.data[ypos];
+  new OpCode(1, function (x, y, retpos, modes) {
+    const xval = this._resolveValue(x, modes[0]);
+    const yval = this._resolveValue(y, modes[1]);
+    this.data[retpos] = xval + yval;
   }),
 
   // multiplication
-  new OpCode(2, function (xpos, ypos, retpos) {
-    this.data[retpos] = this.data[xpos] * this.data[ypos];
+  new OpCode(2, function (x, y, retpos, modes) {
+    const xval = this._resolveValue(x, modes[0]);
+    const yval = this._resolveValue(y, modes[1]);
+    this.data[retpos] = xval * yval;
+  }),
+
+  // input
+  new OpCode(3, function (pos, modes) {
+    this.data[pos] = this.inputs.shift();
+  }),
+
+  // output
+  new OpCode(4, function (pos, modes) {
+    this.outputs.push(this.data[pos]);
+  }),
+
+  // jump-if-true
+  new OpCode(5, function (c, v, modes) {
+    const cond = this._resolveValue(c, modes[0]);
+    const val = this._resolveValue(v, modes[1]);
+    if (cond !== 0) {
+      this.pointer = val;
+    }
+  }),
+
+  // jump-if-false
+  new OpCode(6, function (c, v, modes) {
+    const cond = this._resolveValue(c, modes[0]);
+    const val = this._resolveValue(v, modes[1]);
+    if (cond === 0) {
+      this.pointer = val;
+    }
+  }),
+
+  // less-than
+  new OpCode(7, function (x, y, pos, modes) {
+    const xval = this._resolveValue(x, modes[0]);
+    const yval = this._resolveValue(y, modes[1]);
+    this.data[pos] = xval < yval ? 1 : 0;
+  }),
+
+  // equals
+  new OpCode(8, function (x, y, pos, modes) {
+    const xval = this._resolveValue(x, modes[0]);
+    const yval = this._resolveValue(y, modes[1]);
+    this.data[pos] = xval === yval ? 1 : 0;
   }),
 
   // halt
-  new OpCode(99, function () {
+  new OpCode(99, function (modes) {
     this.isRunning = false;
   }),
 ];
@@ -46,6 +107,8 @@ exports.IntCode = class {
     this.isRunning = false;
     this.opcodes = opcodes !== undefined ? opcodes : new Map();
     this.pointer = 0;
+    this.inputs = [];
+    this.outputs = [];
 
     if (addDefaultOpcodes) {
       defaultOpcodes.forEach(op => this.addOpcode(op));
@@ -53,35 +116,58 @@ exports.IntCode = class {
   }
 
   addOpcode (op, func, force = false) {
-    if (this.opcodes.has(op.code) && ! force) {
+    if (this.opcodes.has(op.code) && !force) {
       throw new Error(`cannot clobber opcode ${op.code}`);
     }
 
-    this.opcodes.set(op.code, op.compile());
+    this.opcodes.set(op.code, op);
   }
 
-  runWithInputs (input1, input2) {
+  runWithInputs (inputs) {
     this.isRunning = true;
     this.pointer = 0;
+    this.inputs = inputs;
+    this.outputs = [];
 
     this.data = this.memory.slice();
-    this.data[1] = input1;
-    this.data[2] = input2;
 
     while (this.isRunning) {
-      const opcode = this.data[this.pointer];
-      const func = this._resolveOpcode(opcode);
-      func.call(this);
+      const instruction = this.data[this.pointer];
+      const [func, modes] = this._resolveInstruction(instruction);
+      func.call(this, modes);
     }
 
-    const ret = this.data[0];
     this.data = undefined;
-    return ret;
+    return this.outputs;
   }
 
-  _resolveOpcode (opcode) {
-    const op = this.opcodes.get(opcode);
-    if (! op) { throw new Error(`uh oh: unknown opcode ${opcode}!`) }
-    return op;
+  // 1002 should compile to 2, [0, 1])
+  _resolveInstruction (instruction) {
+    const s = String(instruction);
+
+    const opcode = s.slice(-2);
+    const op = this.opcodes.get(Number(opcode));
+    if (!op) { throw new Error(`uh oh: unknown opcode ${opcode} processing instruction ${s}!`) }
+
+    const modes = s.slice(0, -2).split('').reverse().map(n => Number(n));
+
+    // fill with zeros
+    if (modes.length < op.numArgs) {
+      for (const _ of range(op.numArgs - modes.length)) {
+        modes.push(0);
+      }
+    }
+
+    return [op.compiled, modes];
+  }
+
+  _resolveValue (val, mode) {
+    if (mode === MODES.POSITION) {
+      return this.data[val];
+    }
+
+    if (mode === MODES.IMMEDIATE) {
+      return val;
+    }
   }
 };
