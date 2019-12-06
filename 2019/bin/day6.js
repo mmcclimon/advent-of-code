@@ -1,8 +1,9 @@
 const utils = require('../lib/advent-utils.js');
 
 const pathToCom = (graph, v) => {
-  let cur = v;
   const path = [];
+
+  let cur = v;
   while (cur !== 'COM') {
     cur = graph.get(cur);
     path.push(cur);
@@ -12,40 +13,37 @@ const pathToCom = (graph, v) => {
 };
 
 const countOrbits = graph => {
-  let total = 0;
-
-  for (const planet of graph.keys()) {
-    total += pathToCom(graph, planet).length;
-  }
-
-  return total;
+  return Array.from(graph.keys()).reduce(
+    (acc, planet) => acc + pathToCom(graph, planet).length,
+    0,
+  );
 };
 
+// compute the paths to the root, the look for the earliest common ancestor
 const distToSanta = graph => {
   const youpath = pathToCom(graph, 'YOU');
   const sanpath = pathToCom(graph, 'SAN');
 
-  const sanset = new Map(
-    Array.from(sanpath.entries()).map(a => [a[1], a[0]]),
-  );
+  const sandist = new Map();
+  sanpath.forEach((val, idx) => sandist.set(val, idx));
 
   for (const [i, planet] of youpath.entries()) {
-    if (sanset.has(planet)) {
-      // console.log(`found ancestor ${planet} at ${i}`);
-      return i + sanset.get(planet);
+    if (sandist.has(planet)) {
+      return i + sandist.get(planet);
     }
   }
 };
 
-// const orbits = ['COM)B', 'B)C', 'C)D', 'D)E', 'E)F', 'B)G', 'G)H', 'D)I', 'E)J', 'J)K', 'K)L', 'K)YOU', 'I)SAN'];
 const orbits = utils.fileLines('input/day6.txt');
 
+// We store the graph as a map of child => parent, which works because the
+// graph is both acyclic and directed; this makes walking back to the root
+// very easy.
 const graph = new Map();
-
-for (const orbit of orbits) {
+orbits.forEach(orbit => {
   const [center, orb] = orbit.split(')');
   graph.set(orb, center);
-}
+});
 
-console.log(countOrbits(graph));
-console.log(distToSanta(graph));
+console.log(`part 1: ${countOrbits(graph)}`);
+console.log(`part 2: ${distToSanta(graph)}`);
