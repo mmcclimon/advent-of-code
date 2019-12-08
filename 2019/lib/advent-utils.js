@@ -25,8 +25,8 @@ exports.getLinesInt = async (filename, cb) => {
 // python's range(); it is bananas that JS does not have this by default
 exports.range = function * (x, y, z) {
   const start = arguments.length > 1 ? x : 0;
-  const end   = arguments.length > 1 ? y : x;
-  const step  = z || 1;
+  const end = arguments.length > 1 ? y : x;
+  const step = z || 1;
   const shouldRun = step > 0 ? i => i < end : i => i > end;
 
   for (let i = start; shouldRun(i); i += step) {
@@ -57,4 +57,24 @@ exports.permutations = input => {
 
   gen(input.length, input);
   return out;
+};
+
+exports.addArrayMagic = () => {
+  // eslint-disable-next-line no-extend-native
+  Object.defineProperties(Array.prototype, {
+    count: {
+      value: function (target) { return this.filter(e => e === target).length },
+    },
+    partition: {
+      value: function (n) {
+        const tmp = this.slice();
+        this.length = 0;
+        while (tmp.length) {
+          this.push(tmp.splice(0, n));
+        }
+
+        return this;
+      },
+    },
+  });
 };
