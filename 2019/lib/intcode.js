@@ -1,5 +1,5 @@
 'use strict';
-const { range } = require('../lib/advent-utils.js');
+const utils = require('../lib/advent-utils.js');
 
 const MODES = {
   POSITION: 0,
@@ -88,9 +88,7 @@ const defaultOpcodes = [
   }),
 ];
 
-exports.OpCode = OpCode;
-
-exports.IntCode = class {
+const IntCode = class {
   constructor (memory) {
     this.rom = memory;
     this.isRunning = false;
@@ -110,9 +108,10 @@ exports.IntCode = class {
     this.opcodes.set(op.code, op);
   }
 
+  // TODO: clean up these extra boolean params
   runWithInputs (inputs, resetBefore = true, breakOnOutput = false) {
     this.isRunning = true;
-    this.inputs = inputs;
+    Array.prototype.push.apply(this.inputs, inputs);
 
     if (resetBefore || !this.data) {
       this.pointer = 0;
@@ -177,3 +176,33 @@ exports.IntCode = class {
     }
   }
 };
+
+const MultiCore = class {
+  constructor (mem, states) {
+    this.cpus = [];
+
+    for (const i of utils.range(states.length)) {
+      const cpu = new IntCode(mem);
+      cpu.inputs.push(states[i]);
+      this.cpus.push(cpu);
+      this.lastCpu = cpu;
+    }
+  }
+
+  runSingleLoop (input) {
+    this.cpus.forEach(cpu => {
+      input = cpu.runWithInputs([input], false, true);
+    });
+
+    return this.lastCpu.lastOutput();
+  }
+
+  runFeedbackLoop (input) {
+    do { input = this.runSingleLoop(input) } while (this.lastCpu.isRunning);
+    return this.lastCpu.lastOutput();
+  }
+};
+
+exports.OpCode = OpCode;
+exports.IntCode = OpCode;
+exports.MultiCore = MultiCore;
