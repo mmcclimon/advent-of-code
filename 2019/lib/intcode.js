@@ -92,7 +92,7 @@ exports.OpCode = OpCode;
 
 exports.IntCode = class {
   constructor (memory) {
-    this.memory = memory;
+    this.rom = memory;
     this.isRunning = false;
     this.opcodes = new Map();
     this.pointer = 0;
@@ -110,21 +110,32 @@ exports.IntCode = class {
     this.opcodes.set(op.code, op);
   }
 
-  runWithInputs (inputs) {
+  runWithInputs (inputs, resetBefore = true, breakOnOutput = false) {
     this.isRunning = true;
-    this.pointer = 0;
     this.inputs = inputs;
-    this.outputs = [];
 
-    this.data = this.memory.slice();
-
-    while (this.isRunning) {
-      const instruction = this.data[this.pointer];
-      this.runInstruction(instruction);
+    if (resetBefore || !this.data) {
+      this.pointer = 0;
+      this.data = this.rom.slice();
+      this.outputs = [];
     }
 
-    this.data = undefined;
-    return this.outputs;
+    while (this.isRunning) {
+      const outputBefore = this.outputs.length;
+
+      const instruction = this.data[this.pointer];
+      this.runInstruction(instruction);
+
+      if (breakOnOutput && this.outputs.length > outputBefore) {
+        return this.lastOutput();
+      }
+    }
+
+    return this.lastOutput();
+  }
+
+  lastOutput () {
+    return this.outputs[this.outputs.length - 1];
   }
 
   runInstruction (instruction) {
