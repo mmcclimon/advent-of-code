@@ -33,3 +33,28 @@ exports.range = function * (x, y, z) {
     yield i;
   }
 };
+
+exports.permutations = input => {
+  const out = [];
+
+  // heap's algorithm
+  const gen = function gen (k, arr) {
+    if (k === 1) {
+      out.push(arr.slice());
+      return;
+    }
+
+    gen(k - 1, arr);
+
+    const swap = (i, j) => { [arr[i], arr[j]] = [arr[j], arr[i]] };
+
+    for (let i = 0; i < k - 1; i++) {
+      const which = k % 2 === 0 ? i : 0;
+      swap(which, k - 1);
+      gen(k - 1, arr);
+    }
+  };
+
+  gen(input.length, input);
+  return out;
+};
