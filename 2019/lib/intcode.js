@@ -7,8 +7,10 @@ const MODES = {
   RELATIVE: 2,
 };
 
-const OpCode = class {
-  constructor ({ code, func, write }) {
+const Op = class {
+  // write, if given, is the index into the argument list of the parameter
+  // that is used to write data into memory
+  constructor (code, func, write = null) {
     this.code = code;
     this.func = func;
     this.numArgs = func.length;
@@ -25,70 +27,35 @@ const OpCode = class {
 };
 
 const defaultOpcodes = [
-  // addition
-  new OpCode({
-    code: 1,
-    write: 2,
-    func: function (x, y, retpos) { this.data[retpos] = x + y },
-  }),
+  // add
+  new Op(1, function (x, y, pos) { this.data[pos] = x + y }, 2),
 
-  // multiplication
-  new OpCode({
-    code: 2,
-    write: 2,
-    func: function (x, y, retpos) { this.data[retpos] = x * y },
-  }),
+  // multiply
+  new Op(2, function (x, y, pos) { this.data[pos] = x * y }, 2),
 
   // input
-  new OpCode({
-    code: 3,
-    write: 0,
-    func: function (pos) { this.data[pos] = this.inputs.shift() },
-  }),
+  new Op(3, function (pos) { this.data[pos] = this.inputs.shift() }, 0),
 
   // output
-  new OpCode({
-    code: 4,
-    func: function (val) { this.outputs.push(val) },
-  }),
+  new Op(4, function (val) { this.outputs.push(val) }),
 
   // jump-if-true
-  new OpCode({
-    code: 5,
-    func: function (cond, val) { this.pointer = cond !== 0 ? val : this.pointer },
-  }),
+  new Op(5, function (cond, x) { this.pointer = cond !== 0 ? x : this.pointer }),
 
   // jump-if-false
-  new OpCode({
-    code: 6,
-    func: function (cond, val) { this.pointer = cond === 0 ? val : this.pointer },
-  }),
+  new Op(6, function (cond, x) { this.pointer = cond === 0 ? x : this.pointer }),
 
   // less-than
-  new OpCode({
-    code: 7,
-    write: 2,
-    func: function (x, y, pos) { this.data[pos] = x < y ? 1 : 0 },
-  }),
+  new Op(7, function (x, y, pos) { this.data[pos] = x < y ? 1 : 0 }, 2),
 
   // equals
-  new OpCode({
-    code: 8,
-    write: 2,
-    func: function (x, y, pos) { this.data[pos] = x === y ? 1 : 0 },
-  }),
+  new Op(8, function (x, y, pos) { this.data[pos] = x === y ? 1 : 0 }, 2),
 
   // relative base adjustment
-  new OpCode({
-    code: 9,
-    func: function (x) { this.relBase += x },
-  }),
+  new Op(9, function (x) { this.relBase += x }),
 
   // halt
-  new OpCode({
-    code: 99,
-    func: function () { this.isRunning = false },
-  }),
+  new Op(99, function () { this.isRunning = false }),
 ];
 
 const IntCode = class {
@@ -100,8 +67,16 @@ const IntCode = class {
     this.relBase = 0;
     this.inputs = [];
     this.outputs = [];
+    this.data = null;
 
     defaultOpcodes.forEach(op => this.addOpcode(op));
+  }
+
+  reset () {
+    this.pointer = 0;
+    this.relBase = 0;
+    this.data = this.rom.slice();
+    this.outputs = [];
   }
 
   addOpcode (op, func, force = false) {
@@ -112,34 +87,27 @@ const IntCode = class {
     this.opcodes.set(op.code, op);
   }
 
-  // TODO: clean up these extra boolean params
-  runWithInputs (inputs, resetBefore = true, breakOnOutput = false) {
-    this.isRunning = true;
-    Array.prototype.push.apply(this.inputs, inputs);
+  get lastOutput () {
+    return this.outputs[this.outputs.length - 1];
+  }
 
-    if (resetBefore || !this.data) {
-      this.pointer = 0;
-      this.relBase = 0;
-      this.data = this.rom.slice();
-      this.outputs = [];
+  runWithInputs (inputs, breakOnOutput = false) {
+    if (!this.isRunning) {
+      this.reset();
     }
 
+    Array.prototype.push.apply(this.inputs, inputs);
+    this.isRunning = true;
+
     while (this.isRunning) {
-      const outputBefore = this.outputs.length;
+      const didOutput = this.runInstruction(this.data[this.pointer]);
 
-      const instruction = this.data[this.pointer];
-      this.runInstruction(instruction);
-
-      if (breakOnOutput && this.outputs.length > outputBefore) {
-        return this.lastOutput();
+      if (breakOnOutput && didOutput) {
+        break;
       }
     }
 
-    return this.lastOutput();
-  }
-
-  lastOutput () {
-    return this.outputs[this.outputs.length - 1];
+    return this.lastOutput;
   }
 
   runInstruction (instruction) {
@@ -156,10 +124,11 @@ const IntCode = class {
     const rawValues = this.data.slice(this.pointer + 1, this.pointer + offset);
 
     const funcArgs = rawValues.map((raw, i) => {
-      return this._resolveValue(raw, modes[i] || MODES.POSITION, op.isWriteParam(i), s);
+      return this._resolveValue(raw, modes[i], op.isWriteParam(i));
     });
 
     const pointerBefore = this.pointer;
+    const oldOutputLen = this.outputs.length;
 
     op.run(this, funcArgs);
 
@@ -167,9 +136,11 @@ const IntCode = class {
     if (this.pointer === pointerBefore) {
       this.pointer += offset;
     }
+
+    return this.outputs.length > oldOutputLen;
   }
 
-  _resolveValue (val, mode, isWrite, inst) {
+  _resolveValue (val, mode = MODES.POSITION, isWrite) {
     if (mode === MODES.POSITION) {
       return isWrite ? val : (this.data[val] || 0);
     }
@@ -189,28 +160,27 @@ const MultiCore = class {
   constructor (mem, states) {
     this.cpus = [];
 
-    for (const i of utils.range(states.length)) {
+    states.forEach(state => {
       const cpu = new IntCode(mem);
-      cpu.inputs.push(states[i]);
+      cpu.inputs.push(state);
       this.cpus.push(cpu);
       this.lastCpu = cpu;
-    }
+    });
   }
 
   runSingleLoop (input) {
     this.cpus.forEach(cpu => {
-      input = cpu.runWithInputs([input], false, true);
+      input = cpu.runWithInputs([input], true);
     });
 
-    return this.lastCpu.lastOutput();
+    return this.lastCpu.lastOutput;
   }
 
   runFeedbackLoop (input) {
     do { input = this.runSingleLoop(input) } while (this.lastCpu.isRunning);
-    return this.lastCpu.lastOutput();
+    return this.lastCpu.lastOutput;
   }
 };
 
-exports.OpCode = OpCode;
 exports.IntCode = IntCode;
 exports.MultiCore = MultiCore;

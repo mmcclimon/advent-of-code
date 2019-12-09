@@ -15,7 +15,7 @@ const mem = [
 ];
 /* eslint-enable comma-spacing */
 
-const cpu = new IntCode(mem, { addDefaultOpcodes: true });
+const cpu = new IntCode(mem);
 
 const res1 = cpu.runWithInputs(12, 2);
 console.log('part 1: ' + res1);
