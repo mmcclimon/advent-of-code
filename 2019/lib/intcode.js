@@ -4,25 +4,23 @@ const utils = require('../lib/advent-utils.js');
 const MODES = {
   POSITION: 0,
   IMMEDIATE: 1,
+  RELATIVE: 2,
 };
 
 const OpCode = class {
-  constructor ({ code, func, resolve = [] }) {
+  constructor ({ code, func, write }) {
     this.code = code;
     this.func = func;
     this.numArgs = func.length;
-
-    // I don't really like this "should I resolve the thing" logic, but I'm
-    // done fiddling for now.
-    this._resolveIndices = new Set(resolve);
+    this.writeParam = write;
   };
 
   run (cpu, funcargs) {
     this.func.apply(cpu, funcargs);
   }
 
-  shouldResolveParam (i) {
-    return this._resolveIndices.has(i);
+  isWriteParam (i) {
+    return i === this.writeParam;
   }
 };
 
@@ -30,55 +28,60 @@ const defaultOpcodes = [
   // addition
   new OpCode({
     code: 1,
-    resolve: [0, 1],
+    write: 2,
     func: function (x, y, retpos) { this.data[retpos] = x + y },
   }),
 
   // multiplication
   new OpCode({
     code: 2,
-    resolve: [0, 1],
+    write: 2,
     func: function (x, y, retpos) { this.data[retpos] = x * y },
   }),
 
   // input
   new OpCode({
     code: 3,
+    write: 0,
     func: function (pos) { this.data[pos] = this.inputs.shift() },
   }),
 
   // output
   new OpCode({
     code: 4,
-    func: function (pos) { this.outputs.push(this.data[pos]) },
+    func: function (val) { this.outputs.push(val) },
   }),
 
   // jump-if-true
   new OpCode({
     code: 5,
-    resolve: [0, 1],
     func: function (cond, val) { this.pointer = cond !== 0 ? val : this.pointer },
   }),
 
   // jump-if-false
   new OpCode({
     code: 6,
-    resolve: [0, 1],
     func: function (cond, val) { this.pointer = cond === 0 ? val : this.pointer },
   }),
 
   // less-than
   new OpCode({
     code: 7,
-    resolve: [0, 1],
+    write: 2,
     func: function (x, y, pos) { this.data[pos] = x < y ? 1 : 0 },
   }),
 
   // equals
   new OpCode({
     code: 8,
-    resolve: [0, 1],
+    write: 2,
     func: function (x, y, pos) { this.data[pos] = x === y ? 1 : 0 },
+  }),
+
+  // relative base adjustment
+  new OpCode({
+    code: 9,
+    func: function (x) { this.relBase += x },
   }),
 
   // halt
@@ -94,6 +97,7 @@ const IntCode = class {
     this.isRunning = false;
     this.opcodes = new Map();
     this.pointer = 0;
+    this.relBase = 0;
     this.inputs = [];
     this.outputs = [];
 
@@ -115,6 +119,7 @@ const IntCode = class {
 
     if (resetBefore || !this.data) {
       this.pointer = 0;
+      this.relBase = 0;
       this.data = this.rom.slice();
       this.outputs = [];
     }
@@ -151,9 +156,7 @@ const IntCode = class {
     const rawValues = this.data.slice(this.pointer + 1, this.pointer + offset);
 
     const funcArgs = rawValues.map((raw, i) => {
-      return op.shouldResolveParam(i)
-             ? this._resolveValue(raw, modes[i] || MODES.POSITION)
-             : raw;
+      return this._resolveValue(raw, modes[i] || MODES.POSITION, op.isWriteParam(i), s);
     });
 
     const pointerBefore = this.pointer;
@@ -166,13 +169,18 @@ const IntCode = class {
     }
   }
 
-  _resolveValue (val, mode) {
+  _resolveValue (val, mode, isWrite, inst) {
     if (mode === MODES.POSITION) {
-      return this.data[val];
+      return isWrite ? val : (this.data[val] || 0);
     }
 
     if (mode === MODES.IMMEDIATE) {
       return val;
+    }
+
+    if (mode === MODES.RELATIVE) {
+      const pos = this.relBase + val;
+      return isWrite ? pos : (this.data[pos] || 0);
     }
   }
 };
@@ -204,5 +212,5 @@ const MultiCore = class {
 };
 
 exports.OpCode = OpCode;
-exports.IntCode = OpCode;
+exports.IntCode = IntCode;
 exports.MultiCore = MultiCore;
