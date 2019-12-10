@@ -5,8 +5,8 @@ const [line] = utils.fileLines('input/day5.txt');
 const mem = line.split(',').map(n => Number(n));
 const cpu = new IntCode(mem, { addDefaultOpcodes: true });
 
-const outputs = cpu.runWithInputs([1]);
+const outputs = cpu.runWithInput(1);
 console.log(outputs);
 
-const outputs2 = cpu.runWithInputs([5]);
+const outputs2 = cpu.runWithInput(5);
 console.log(outputs2);

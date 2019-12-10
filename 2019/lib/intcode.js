@@ -91,12 +91,22 @@ const IntCode = class {
     return this.outputs[this.outputs.length - 1];
   }
 
-  runWithInputs (inputs, breakOnOutput = false) {
+  // for day 2
+  runLegacyInput (input1, input2) {
+    this.reset();
+    this.isRunning = true;
+    this.data[1] = input1;
+    this.data[2] = input2;
+    this.runWithInput();
+    return this.data[0];
+  }
+
+  runWithInput (input, breakOnOutput = false) {
     if (!this.isRunning) {
       this.reset();
     }
 
-    Array.prototype.push.apply(this.inputs, inputs);
+    this.inputs.push(input);
     this.isRunning = true;
 
     while (this.isRunning) {
@@ -122,21 +132,21 @@ const IntCode = class {
     // resolve values as necessary
     const offset = op.numArgs + 1;
     const rawValues = this.data.slice(this.pointer + 1, this.pointer + offset);
-
     const funcArgs = rawValues.map((raw, i) => {
       return this._resolveValue(raw, modes[i], op.isWriteParam(i));
     });
 
-    const pointerBefore = this.pointer;
+    const oldPointer = this.pointer;
     const oldOutputLen = this.outputs.length;
 
     op.run(this, funcArgs);
 
     // do not bump pointer if instruction moved it.
-    if (this.pointer === pointerBefore) {
+    if (this.pointer === oldPointer) {
       this.pointer += offset;
     }
 
+    // return whether or not we output anything
     return this.outputs.length > oldOutputLen;
   }
 
@@ -170,7 +180,7 @@ const MultiCore = class {
 
   runSingleLoop (input) {
     this.cpus.forEach(cpu => {
-      input = cpu.runWithInputs([input], true);
+      input = cpu.runWithInput(input, true);
     });
 
     return this.lastCpu.lastOutput;

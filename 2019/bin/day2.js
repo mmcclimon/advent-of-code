@@ -17,16 +17,16 @@ const mem = [
 
 const cpu = new IntCode(mem);
 
-const res1 = cpu.runWithInputs(12, 2);
+const res1 = cpu.runLegacyInput(12, 2);
 console.log('part 1: ' + res1);
 
 OUTER: for (const noun of range(100)) {
   for (const verb of range(100)) {
-    const got = cpu.runWithInputs(noun, verb);
+    const got = cpu.runLegacyInput(noun, verb);
 
     if (got === 19690720) {
       console.log(
-        `part 2: ${100 * noun + verb} (noun: ${noun}, verb: ${verb})`
+        `part 2: ${100 * noun + verb} (noun: ${noun}, verb: ${verb})`,
       );
       break OUTER;
     }
