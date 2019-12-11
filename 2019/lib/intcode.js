@@ -1,5 +1,4 @@
 'use strict';
-const utils = require('../lib/advent-utils.js');
 
 const MODES = {
   POSITION: 0,
@@ -55,19 +54,14 @@ const defaultOpcodes = [
   new Op(9, function (x) { this.relBase += x }),
 
   // halt
-  new Op(99, function () { this.isRunning = false }),
+  new Op(99, function () { this.isHalted = true }),
 ];
 
 const IntCode = class {
   constructor (memory) {
     this.rom = memory;
-    this.isRunning = false;
     this.opcodes = new Map();
-    this.pointer = 0;
-    this.relBase = 0;
-    this.inputs = [];
-    this.outputs = [];
-    this.data = null;
+    this.reset();
 
     defaultOpcodes.forEach(op => this.addOpcode(op));
   }
@@ -75,8 +69,11 @@ const IntCode = class {
   reset () {
     this.pointer = 0;
     this.relBase = 0;
+    this.isHalted = false;
     this.data = this.rom.slice();
     this.outputs = [];
+    this.inputs = [];
+    return this;
   }
 
   addOpcode (op, func, force = false) {
@@ -91,24 +88,15 @@ const IntCode = class {
     return this.outputs[this.outputs.length - 1];
   }
 
-  // for day 2
-  runLegacyInput (input1, input2) {
-    this.reset();
-    this.isRunning = true;
-    this.data[1] = input1;
-    this.data[2] = input2;
-    this.runWithInput();
-    return this.data[0];
+  get isRunning () {
+    return !this.isHalted;
   }
 
-  runWithInput (input, breakOnOutput = false) {
-    if (!this.isRunning) {
-      this.reset();
-    }
+  input (...data) {
+    this.inputs.push.apply(this.inputs, data);
+  }
 
-    this.inputs.push(input);
-    this.isRunning = true;
-
+  run (breakOnOutput = false) {
     while (this.isRunning) {
       const didOutput = this.runInstruction(this.data[this.pointer]);
 
@@ -118,6 +106,21 @@ const IntCode = class {
     }
 
     return this.lastOutput;
+  }
+
+  // for day 2
+  runLegacyInput (input1, input2) {
+    this.reset();
+    this.data[1] = input1;
+    this.data[2] = input2;
+    this.run();
+    return this.data[0];
+  }
+
+  // legacy interface
+  runWithInput (input, breakOnOutput) {
+    this.input(input);
+    return this.run(breakOnOutput);
   }
 
   runInstruction (instruction) {
@@ -139,6 +142,7 @@ const IntCode = class {
     const oldPointer = this.pointer;
     const oldOutputLen = this.outputs.length;
 
+    // console.log(`running ${op.code}`);
     op.run(this, funcArgs);
 
     // do not bump pointer if instruction moved it.
