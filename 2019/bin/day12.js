@@ -1,3 +1,5 @@
+const AXES = ['x', 'y', 'z'];
+
 const lcm = (a, b) => {
   const gcd = function gcd (m, n) {
     if (n === 0) return m;
@@ -9,27 +11,20 @@ const lcm = (a, b) => {
 
 const Moon = class {
   constructor (x, y, z) {
-    this.initialPos = [x, y, z];
-
-    this.posX = x;
-    this.posY = y;
-    this.posZ = z;
-
-    this.velX = 0;
-    this.velY = 0;
-    this.velZ = 0;
-    this.period = null;
+    this.initialPos = { x: x, y: y, z: z };
+    this.pos = { x: x, y: y, z: z };
+    this.vel = { x: 0, y: 0, z: 0 };
   }
 
   reset () {
-    [this.posX, this.posY, this.posZ] = this.initialPos;
-    [this.velX, this.velY, this.velZ] = [0, 0, 0];
+    AXES.forEach(axis => {
+      this.pos[axis] = this.initialPos[axis];
+      this.vel[axis] = 0;
+    });
   }
 
   move () {
-    this.posX += this.velX;
-    this.posY += this.velY;
-    this.posZ += this.velZ;
+    AXES.forEach(axis => { this.pos[axis] += this.vel[axis] });
   }
 
   totalEnergy () {
@@ -37,15 +32,11 @@ const Moon = class {
   }
 
   get potentialEnergy () {
-    return Math.abs(this.posX) + Math.abs(this.posY) + Math.abs(this.posZ);
+    return AXES.reduce((acc, axis) => acc + Math.abs(this.pos[axis]), 0);
   }
 
   get kineticEnergy () {
-    return Math.abs(this.velX) + Math.abs(this.velY) + Math.abs(this.velZ);
-  }
-
-  asString () {
-    return `pos=<x=${this.posX}, y=${this.posY}, z=${this.posZ}>, vel=<x=${this.velX}, y=${this.velY}, z=${this.velZ}>`;
+    return AXES.reduce((acc, axis) => acc + Math.abs(this.vel[axis]), 0);
   }
 };
 
@@ -73,33 +64,27 @@ const System = class {
   }
 
   findPeriods () {
-    const seenX = new Set();
-    const seenY = new Set();
-    const seenZ = new Set();
-    let foundX = false;
-    let foundY = false;
-    let foundZ = false;
+    const seen = { x: new Set(), y: new Set(), z: new Set() };
+    const found = { x: false, y: false, z: false };
 
     while (true) {
-      const s = this.steps;
+      const thisStep = this.steps;
       this._step();
 
-      // add all xs, ys, and zs
-      const xk = this.moons.map(m => [m.posX, m.velX]).join(',');
-      const yk = this.moons.map(m => [m.posY, m.velY]).join(',');
-      const zk = this.moons.map(m => [m.posZ, m.velZ]).join(',');
+      AXES.forEach(axis => {
+        const key = this.moons.map(m => [m.pos[axis], m.vel[axis]]).join(',');
 
-      if (!foundX && seenX.has(xk)) { foundX = s }
-      if (!foundY && seenY.has(yk)) { foundY = s }
-      if (!foundZ && seenZ.has(zk)) { foundZ = s }
+        if (!found[axis] && seen[axis].has(key)) {
+          // hey neat, a repeat! that's the period for this axis.
+          found[axis] = thisStep;
+        }
 
-      if (foundX && foundY && foundZ) {
-        return [foundX, foundY, foundZ];
+        seen[axis].add(key);
+      });
+
+      if (found.x && found.y && found.z) {
+        return Object.values(found);
       }
-
-      seenX.add(xk);
-      seenY.add(yk);
-      seenZ.add(zk);
     }
   }
 
@@ -119,13 +104,13 @@ const System = class {
   }
 
   _compareMoons (a, b) {
-    ['X', 'Y', 'Z'].forEach(axis => {
-      if (a['pos' + axis] > b['pos' + axis]) {
-        a['vel' + axis]--;
-        b['vel' + axis]++;
-      } else if (a['pos' + axis] < b['pos' + axis]) {
-        a['vel' + axis]++;
-        b['vel' + axis]--;
+    AXES.forEach(axis => {
+      if (a.pos[axis] > b.pos[axis]) {
+        a.vel[axis]--;
+        b.vel[axis]++;
+      } else if (a.pos[axis] < b.pos[axis]) {
+        a.vel[axis]++;
+        b.vel[axis]--;
       }
     });
   }
