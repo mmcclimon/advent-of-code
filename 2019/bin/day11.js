@@ -27,8 +27,7 @@ const Robot = class {
       const colorOn = this._map.get(this.posKey) || 0;
       this.cpu.input(colorOn);
 
-      const color = this.cpu.run(true);
-      const turn = this.cpu.run(true);
+      const [color, turn] = this.cpu.runForNOutputs(2);
 
       this._map.set(this.posKey, color);
 

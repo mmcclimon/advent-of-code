@@ -117,7 +117,6 @@ module.exports = {
       "allowSamePrecedence": true
     }],
     "no-mixed-spaces-and-tabs": "error",
-    "no-multi-spaces": "warn",
     "no-multi-str": "error",
     "no-multiple-empty-lines": ["error", { "max": 1, "maxEOF": 0 }],
     "no-negated-in-lhs": "error",

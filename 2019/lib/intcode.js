@@ -25,6 +25,8 @@ const Op = class {
   }
 };
 
+const NoInputError = class extends Error {};
+
 const defaultOpcodes = [
   // add
   new Op(1, function (x, y, pos) { this.data[pos] = x + y }, 2),
@@ -33,7 +35,13 @@ const defaultOpcodes = [
   new Op(2, function (x, y, pos) { this.data[pos] = x * y }, 2),
 
   // input
-  new Op(3, function (pos) { this.data[pos] = this.inputs.shift() }, 0),
+  new Op(3, function (pos) {
+    if (this.inputs.length === 0) {
+      throw new NoInputError('no input');
+    }
+    this.isPaused = false;
+    this.data[pos] = this.inputs.shift();
+  }, 0),
 
   // output
   new Op(4, function (val) { this.outputs.push(val) }),
@@ -70,6 +78,7 @@ const IntCode = class {
     this.pointer = 0;
     this.relBase = 0;
     this.isHalted = false;
+    this.isPaused = false;
     this.data = this.rom.slice();
     this.outputs = [];
     this.inputs = [];
@@ -96,9 +105,21 @@ const IntCode = class {
     this.inputs.push.apply(this.inputs, data);
   }
 
-  run (breakOnOutput = false) {
+  run (breakOnOutput = false, pauseForInput = false) {
+    // console.log(`running at pointer ${this.pointer}`);
     while (this.isRunning) {
-      const didOutput = this.runInstruction(this.data[this.pointer]);
+      let didOutput;
+
+      // eslint-disable-next-line
+      try { didOutput = this.runInstruction(this.data[this.pointer]) }
+      catch (e) {
+        if (e instanceof NoInputError && pauseForInput) {
+          this.isPaused = true;
+          return;
+        }
+
+        throw e;
+      }
 
       if (breakOnOutput && didOutput) {
         break;
@@ -106,6 +127,17 @@ const IntCode = class {
     }
 
     return this.lastOutput;
+  }
+
+  runForNOutputs (n, pauseForInput = false) {
+    const before = this.outputs.length;
+
+    while (this.outputs.length < before + n && this.isRunning) {
+      this.run(true, pauseForInput);
+      if (this.isPaused) break;
+    }
+
+    return this.outputs.slice(-1 * n);
   }
 
   // for day 2
