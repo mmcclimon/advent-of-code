@@ -202,31 +202,4 @@ const IntCode = class {
   }
 };
 
-const MultiCore = class {
-  constructor (mem, states) {
-    this.cpus = [];
-
-    states.forEach(state => {
-      const cpu = new IntCode(mem);
-      cpu.inputs.push(state);
-      this.cpus.push(cpu);
-      this.lastCpu = cpu;
-    });
-  }
-
-  runSingleLoop (input) {
-    this.cpus.forEach(cpu => {
-      input = cpu.runWithInput(input, true);
-    });
-
-    return this.lastCpu.lastOutput;
-  }
-
-  runFeedbackLoop (input) {
-    do { input = this.runSingleLoop(input) } while (this.lastCpu.isRunning);
-    return this.lastCpu.lastOutput;
-  }
-};
-
 exports.IntCode = IntCode;
-exports.MultiCore = MultiCore;

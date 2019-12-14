@@ -36,6 +36,7 @@ const Game = class {
     } else {
       // special case first time around
       if (typeof this.grid[y] === 'undefined') { this.grid[y] = [] }
+
       this.grid[y][x] = out;
 
       switch (out) {
