@@ -1,4 +1,3 @@
-const util = require('util');
 const utils = require('../lib/advent-utils.js');
 
 const parseLines = lines => {
@@ -21,24 +20,25 @@ const parseLines = lines => {
   return requirements;
 };
 
-// for constructing proxies
-const defaultzero = {
-  get: function (obj, prop) { return prop in obj ? obj[prop] : 0 },
-};
-
 const neededFor = (requirements, amtNeeded, what) => {
+  // for constructing proxies
+  const defaultzero = {
+    get: function (obj, prop) { return prop in obj ? obj[prop] : 0 },
+  };
+
   const totals = new Proxy({}, defaultzero);
   const extras = new Proxy({}, defaultzero);
 
-  const haveCashableBatches = (extras) => {
-    let ret = false;
-    for (const [comp, amt] of Object.entries(extras)) {
-      const reqForComp = requirements[comp];
-      const extraBatches = Math.floor(amt / reqForComp.batchSize);
-      ret = ret || extraBatches > 0;
-    }
-    return ret;
-  };
+  Object.defineProperty(extras, 'hasCashableBatches', {
+    value: function () {
+      for (const [comp, amt] of Object.entries(this)) {
+        const extraBatches = Math.floor(amt / requirements[comp].batchSize);
+        if (extraBatches > 0) return true;
+      }
+
+      return false;
+    },
+  });
 
   const _calcNeededFor = (amtNeeded, what) => {
     if (what === 'ORE') { return }
@@ -57,13 +57,14 @@ const neededFor = (requirements, amtNeeded, what) => {
     }
   };
 
+  // compute initial totals and extras
   _calcNeededFor(amtNeeded, what);
 
   // we have a total amount of ore. We will now cash out all the extras and
   // subtract that from the total.
   let totalOre = totals.ORE;
 
-  while (haveCashableBatches(extras)) {
+  while (extras.hasCashableBatches()) {
     for (const [comp, amount] of Object.entries(extras)) {
       const reqForComp = requirements[comp];
       const extraBatches = Math.floor(amount / reqForComp.batchSize);
