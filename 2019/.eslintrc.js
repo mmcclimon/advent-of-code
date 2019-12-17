@@ -157,7 +157,7 @@ module.exports = {
     "no-unused-vars": ["warn", {
       "vars": "all",
       "args": "none",
-      "ignoreRestSiblings": true
+      "ignoreRestSiblings": true,
       "varsIgnorePattern": "^_+$",
     }],
     "no-use-before-define": ["error", { "functions": false, "classes": false, "variables": false }],
