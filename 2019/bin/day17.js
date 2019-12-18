@@ -39,7 +39,7 @@ const Grid = class {
       g[y] = [];
       for (const x of utils.range(this.minX, this.maxX + 1)) {
         const c = this.cellAt(x, y);
-        g[y][x] = c.isIntersection() ? 'x' : c.content;
+        g[y][x] = c.content;
       }
     }
 
@@ -92,7 +92,8 @@ const gridFromString = s => {
   return grid;
 };
 
-const part1 = cpu => {
+const part1 = mem => {
+  const cpu = new IntCode(mem);
   cpu.run();
 
   const s = String.fromCharCode(...cpu.outputs);
@@ -103,8 +104,29 @@ const part1 = cpu => {
     .reduce((acc, cell) => acc + cell.x * cell.y, 0);
 };
 
+const part2 = mem => {
+  mem[0] = 2;
+  const cpu = new IntCode(mem);
+
+  const genInstruction = s => (s + '\n').split('').map(s => s.charCodeAt(0));
+
+  // done by hand
+  const mvmt = 'A,B,A,B,C,A,C,A,C,B';
+  const fnA = 'R,12,L,8,L,4,L,4';
+  const fnB = 'L,8,R,6,L,6';
+  const fnC = 'L,8,L,4,R,12,L,6,L,4';
+  const wantVideo = 'n';
+
+  [mvmt, fnA, fnB, fnC, wantVideo].forEach(inst => {
+    cpu.input(...genInstruction(inst));
+  });
+
+  const output = cpu.run();
+  return output;
+};
+
 const [line] = utils.fileLines('input/day17.txt');
 const mem = line.split(',').map(n => Number(n));
-const cpu = new IntCode(mem);
 
-console.log(`part 1: ${part1(cpu)}`);
+console.log(`part 1: ${part1(mem)}`);
+console.log(`part 2: ${part2(mem)}`);
