@@ -1,28 +1,25 @@
 const utils = require('../lib/advent-utils.js');
 const { IntCode } = require('../lib/intcode.js');
+const { Grid } = require('../lib/grid.js');
 
 const Movements = { NORTH: 1, SOUTH: 2, WEST: 3, EAST: 4 };
 const Status = { WALL: 0, OPEN: 1, FOUND: 2 };
 
-const part1 = cpu => {
-  const seen = new Map();
-  let [x, y] = [0, 0];
-  let status = 0;
-  let input = Movements.NORTH;
+const Droid = class {
+  constructor (cpu) {
+    this.cpu = cpu;
+    this.map = new Grid();
+    this.x = 0;
+    this.y = 0;
+    this.history = [];
 
-  seen.set('0,0', Status.OPEN);
+    const cell = this.map.addCell(this.x, this.y, Status.OPEN);
+    this.history.push(cell);
+  }
 
-  // prefer a direction we haven't seen...
-  const rotate = () => {
-    let b = input;
-    input++;
-    if (input === 5) input = 1;
-    // console.log(` rotate: before ${b}, now ${input}`);
-  };
-
-  const prospectiveCoords = input => {
-    let [toX, toY] = [x, y];
-    switch (input) {
+  coordsFor (dir) {
+    let [toX, toY] = [this.x, this.y];
+    switch (dir) {
       case Movements.NORTH: toY++; break;
       case Movements.SOUTH: toY--; break;
       case Movements.EAST: toX++; break;
@@ -32,9 +29,65 @@ const part1 = cpu => {
     return [toX, toY];
   };
 
-  // walls we've tried this time out
-  let tried = [];
+  _tryMovement (dir) {
+    cpu.input(dir);
+    const [status] = cpu.runForNOutputs(1, true);
 
+    const [toX, toY] = this.coordsFor(dir);
+    this.map.addCell(toX, toY, status);
+
+    // console.log(`got status ${status} for ${toX},${toY}`);
+
+    let didMove = false;
+
+    switch (status) {
+      case Status.WALL:
+        break;
+
+      case Status.FOUND:
+        console.log('got it!');
+        // fall through
+
+      case Status.OPEN:
+        this.x = toX;
+        this.y = toY;
+        didMove = true;
+        break;
+    }
+
+    return didMove;
+  }
+
+  moveOneStep () {
+    let done = false;
+    let dir = Movements.NORTH;
+    while (!done) {
+      done = this._tryMovement(dir);
+      dir++;
+    }
+  }
+};
+
+const part1 = cpu => {
+  const droid = new Droid(cpu);
+  for (const _ of utils.range(50)) {
+    droid.moveOneStep();
+  }
+
+  droid.map.draw();
+
+  /*
+  let [x, y] = [0, 0];
+  let status = 0;
+  let input = Movements.NORTH;
+
+  grid.addCell(0, 0, Status.OPEN);
+
+
+  // try all four positions
+
+  /*
+  // walls we've tried this time out
   let loops = 0;
   while (status !== Status.FOUND && loops++ < 79) {
     const [toX, toY] = prospectiveCoords(input);
@@ -61,8 +114,7 @@ const part1 = cpu => {
         break;
     }
   }
-
-  return Math.abs(x) + Math.abs(y);
+  */
 };
 
 const [line] = utils.fileLines('input/day15.txt');

@@ -21,11 +21,6 @@ const DefaultCell = class {
     return [this.north, this.east, this.south, this.west]
       .filter(c => typeof c !== 'undefined');
   }
-
-  isIntersection () {
-    return this.content === '#' &&
-      this.neighbors.filter(c => c.content !== '.').length === 4;
-  }
 };
 
 const Grid = class {
@@ -50,6 +45,8 @@ const Grid = class {
     if (x < this.minX) this.minX = x;
     if (y > this.maxY) this.maxY = y;
     if (y < this.minY) this.minY = y;
+
+    return c;
   }
 
   cellAt (x, y) {
@@ -63,12 +60,16 @@ const Grid = class {
 
   asArray () {
     const g = [];
+
     for (const y of utils.range(this.minY, this.maxY + 1)) {
-      g[y] = [];
+      const thisRow = [];
+
       for (const x of utils.range(this.minX, this.maxX + 1)) {
         const c = this.cellAt(x, y);
-        g[y][x] = c.content;
+        thisRow.push(c ? c.content : ' ');
       }
+
+      g.push(thisRow);
     }
 
     return g;
